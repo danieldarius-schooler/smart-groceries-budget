@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Smart Grocery & Budget Safety Tracker</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="PWA Belanja Supermarket & Budget Safety Realtime untuk Siswa Rantau">
+  <meta name="theme-color" content="#0b1120">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SmartGrocery">
+  
+  <!-- Manifest & Favicon -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+
+  <!-- Lucide Icons CDN (with inline SVG fallback) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+  <!-- MOBILE DEVICE FRAME (Max 430px Centered on Desktop) -->
+  <div class="device-frame" id="appFrame">
+    
+    <!-- Mobile Status Bar (Simulated Notch & Clock) -->
+    <div class="mobile-status-bar">
+      <span id="liveClock">09:48</span>
+      <div class="status-bar-icons">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         HEADER SESI BELANJA: Lokasi Supermarket & Tanggal Transaksi
+         ==================================================================== -->
+    <header class="session-header">
+      <div class="header-meta-row">
+        <div class="brand-badge">
+          <div class="brand-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+          </div>
+          <div>
+            <h1 class="brand-title">Smart Grocery</h1>
+            <p class="brand-sub">Budget Safety Tracker</p>
+          </div>
+        </div>
+
+        <!-- Realtime / Offline Indicator Pill -->
+        <button class="sync-badge connecting" id="syncBadgeBtn" title="Klik untuk pengaturan Realtime & Sesi">
+          <span class="sync-dot"></span>
+          <span id="syncStatusLabel">Menghubungkan...</span>
+        </button>
+      </div>
+
+      <!-- Selector Toko & Tanggal Transaksi -->
+      <div class="selector-grid">
+        <div class="custom-select-wrap">
+          <select id="storeSelector" title="Pilih Lokasi Supermarket">
+            <option value="Lotte Mart Grocery - Puri Indah" selected>🏪 Lotte Mart - Puri Indah</option>
+            <option value="Super Indo Intercon">🏪 Super Indo - Intercon</option>
+            <option value="Indomaret Fresh - Meruya">🏪 Indomaret Fresh - Meruya</option>
+            <option value="Hypermart - Puri Indah">🏪 Hypermart - Puri Indah</option>
+            <option value="Transmart - Central Park">🏪 Transmart - Central Park</option>
+            <option value="Grand Lucky - Radio Dalam">🏪 Grand Lucky - Radio Dalam</option>
+          </select>
+        </div>
+
+        <div class="custom-date-wrap">
+          <input type="date" id="shoppingDateInput" title="Tanggal Transaksi">
+        </div>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         BUDGET SAFETY GAUGE CARD (Pelindung Dompet Anak Rantau)
+         ==================================================================== -->
+    <section class="budget-safety-card safe" id="budgetSafetyCard">
+      <div class="budget-top-row">
+        <div class="budget-label-group">
+          <span class="budget-title">Total Belanja Saat Ini</span>
+          <span class="budget-spent-amount" id="displayTotalSpent">Rp 0</span>
+        </div>
+        
+        <button class="budget-limit-btn" id="openBudgetLimitBtn" title="Klik untuk ubah batas dompet">
+          <span class="budget-limit-label">Pagu Anggaran ✎</span>
+          <span class="budget-limit-val" id="displayWalletLimit">Rp 500.000</span>
+        </button>
+      </div>
+
+      <!-- Progress Track Gauge -->
+      <div class="progress-container">
+        <div class="progress-track">
+          <div class="progress-fill" id="budgetProgressFill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div class="budget-bottom-info">
+        <div class="budget-remaining" id="displayRemaining">
+          Sisa: <b id="remainingVal">Rp 500.000</b> (<span id="spentPercent">0%</span>)
+        </div>
+        <div class="budget-badge-pill" id="budgetStatusPill">
+          Aman (< 75%)
+        </div>
+      </div>
+
+      <!-- Alert Peringatan Bahaya Overbudget -->
+      <div class="alert-banner" id="overbudgetAlert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span><b>🚨 BAHAYA:</b> Belanjaan melebihi anggaran bulanan! Kurangi barang sekunder di troli!</span>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TAB CONTENT AREA
+         ==================================================================== -->
+    <main class="tab-content-area" id="tabContentArea">
+      
+      <!-- TAB 1: BELANJA (TROLI AKTIF) -->
+      <div class="tab-pane active" id="paneBelanja">
+        
+        <!-- Category Filter Chips (Ramah Jempol) -->
+        <div class="category-chips-scroll" id="catChipsContainer">
+          <button class="cat-chip active" data-cat="ALL">Semua</button>
+          <button class="cat-chip" data-cat="Kebutuhan Pokok">🍚 Pokok</button>
+          <button class="cat-chip" data-cat="Makanan & Lauk">🍗 Lauk</button>
+          <button class="cat-chip" data-cat="Mandi & Cuci">🧼 Mandi/Cuci</button>
+          <button class="cat-chip" data-cat="Bumbu & Dapur">🧂 Bumbu</button>
+          <button class="cat-chip" data-cat="Snack & Minuman">🧃 Snack</button>
+          <button class="cat-chip" data-cat="Lain-lain">📦 Lainnya</button>
+        </div>
+
+        <!-- Subheader & Quick Add Button -->
+        <div class="action-subheader">
+          <div class="action-count" id="itemSummaryCount">
+            <span id="countInCart">0</span> / <span id="countTotal">0</span> di troli
+          </div>
+          <button class="btn-quick-add" id="openAddItemModalBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Tambah Barang
+          </button>
+        </div>
+
+        <!-- Mobile Card List Items (Bukan Tabel Desktop Melebar) -->
+        <div class="grocery-list" id="groceryItemList">
+          <!-- Item Card di-generate dinamis oleh app.js -->
+        </div>
+
+      </div>
+
+      <!-- TAB 2: RIWAYAT TOKO (STORE HISTORY & RECEIPTS) -->
+      <div class="tab-pane" id="paneRiwayat" style="display: none;">
+        <div class="action-subheader">
+          <h2 class="section-h3" style="margin:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            Riwayat Belanja Supermarket
+          </h2>
+          <button class="btn-quick-add" id="saveSessionToHistoryBtn" style="background:#3b82f6;">
+            Selesaikan Sesi
+          </button>
+        </div>
+
+        <div id="historyListContainer">
+          <!-- Riwayat Sesi Belanja -->
+        </div>
+
+        <!-- Perbandingan Harga Antar Supermarket -->
+        <div class="budget-config-card" style="margin-top: 16px;">
+          <h3 class="section-h3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+            Tips Radar Harga Toko Rantau
+          </h3>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+            • <b>Lotte Mart:</b> Paling hemat untuk pembelian beras 5kg & minyak goreng kartonan.<br>
+            • <b>Super Indo:</b> Promo daging ayam, telur, dan buah segar tiap Selasa & Kamis.<br>
+            • <b>Indomaret Fresh:</b> Praktis untuk belanja mingguan sayuran & bumbu instan dekat kos.
+          </p>
+        </div>
+      </div>
+
+      <!-- TAB 3: ANGGARAN (BUDGET SAFETY & ANALYTICS) -->
+      <div class="tab-pane" id="paneAnggaran" style="display: none;">
+        
+        <div class="budget-config-card">
+          <h3 class="section-h3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            Pagu Anggaran Belanja Bulanan
+          </h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
+            Atur pagu belanja agar uang bulanan kiriman orang tua tidak cepat habis.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Batas Dompet Maksimal (Rp)</label>
+            <input type="number" id="inputWalletLimitSettings" class="form-input numeric-big" inputmode="numeric" value="500000">
+            <div class="quick-amount-chips">
+              <button class="chip-btn" data-set-limit="300000">Rp 300rb</button>
+              <button class="chip-btn" data-set-limit="500000">Rp 500rb</button>
+              <button class="chip-btn" data-set-limit="750000">Rp 750rb</button>
+              <button class="chip-btn" data-set-limit="1000000">Rp 1 Jt</button>
+            </div>
+          </div>
+          <button class="btn-primary-block" id="btnSaveLimitSettings">Simpan Pagu Anggaran</button>
+        </div>
+
+        <!-- Breakdown Pengeluaran per Kategori -->
+        <div class="budget-config-card">
+          <h3 class="section-h3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+            Proporsi Kategori Belanja
+          </h3>
+          <div id="categoryBreakdownList">
+            <!-- Diisi dinamis -->
+          </div>
+        </div>
+
+        <!-- Tips Hemat Belanja Anak Rantau -->
+        <div class="tips-box">
+          <div class="tips-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 18v4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M20 12h-4"/><path d="m19.07 4.93-2.83 2.83"/></svg>
+            Aturan Troli Supermarket Siswa Rantau
+          </div>
+          <ul class="tips-list">
+            <li><b>Kenyang Sebelum Belanja:</b> Jangan pernah ke supermarket saat perut lapar agar tidak kalap membeli cemilan.</li>
+            <li><b>Prioritas Rak Bawah:</b> Supermarket menaruh barang mahal sejajar mata. Lihat rak paling bawah untuk merek lokal yang lebih murah.</li>
+            <li><b>Pantau Bar Safety:</b> Jika bar mendekati 80%, hentikan belanja barang non-makanan primer.</li>
+          </ul>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- ====================================================================
+         BOTTOM NAVIGATION BAR MELAYANG (Ikon Lucide)
+         ==================================================================== -->
+    <nav class="bottom-nav-bar" id="bottomNavBar">
+      <button class="nav-tab-btn active" data-tab="paneBelanja">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span>Belanja</span>
+      </button>
+
+      <button class="nav-tab-btn" data-tab="paneRiwayat">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Riwayat Toko</span>
+      </button>
+
+      <button class="nav-tab-btn" data-tab="paneAnggaran">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Anggaran</span>
+      </button>
+    </nav>
+
+    <!-- ====================================================================
+         MODAL BOTTOM SHEET: Tambah / Edit Barang (Touch Friendly)
+         ==================================================================== -->
+    <div class="modal-overlay" id="itemModalOverlay">
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+          <h3 class="modal-title" id="modalTitle">Tambah Barang Troli</h3>
+          <button class="modal-close-btn" id="closeItemModalBtn">✕</button>
+        </div>
+
+        <form id="itemForm">
+          <input type="hidden" id="editItemId" value="">
+
+          <div class="form-group">
+            <label class="form-label">Nama Barang</label>
+            <input type="text" id="inputItemName" class="form-input" placeholder="Misal: Beras Ramos 5kg, Telur 1kg..." required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Kategori Kos</label>
+              <select id="inputItemCategory" class="form-select">
+                <option value="Kebutuhan Pokok">🍚 Kebutuhan Pokok</option>
+                <option value="Makanan & Lauk">🍗 Makanan & Lauk</option>
+                <option value="Mandi & Cuci">🧼 Mandi & Cuci</option>
+                <option value="Bumbu & Dapur">🧂 Bumbu & Dapur</option>
+                <option value="Snack & Minuman">🧃 Snack & Minuman</option>
+                <option value="Lain-lain">📦 Lain-lain</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Satuan</label>
+              <select id="inputItemUnit" class="form-select">
+                <option value="pcs">pcs</option>
+                <option value="kg">kg</option>
+                <option value="pack">pack</option>
+                <option value="sak">sak</option>
+                <option value="botol">botol</option>
+                <option value="dus">dus</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Input Angka Besar dengan Keyboard Numerik Otomatis -->
+          <div class="form-group">
+            <label class="form-label">Harga Satuan (Rp)</label>
+            <input type="number" id="inputItemPrice" class="form-input numeric-big" placeholder="0" inputmode="numeric" required>
+            
+            <div class="quick-amount-chips">
+              <button type="button" class="chip-btn" data-add-price="5000">+5rb</button>
+              <button type="button" class="chip-btn" data-add-price="10000">+10rb</button>
+              <button type="button" class="chip-btn" data-add-price="25000">+25rb</button>
+              <button type="button" class="chip-btn" data-add-price="50000">+50rb</button>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Jumlah (Qty)</label>
+              <input type="number" id="inputItemQty" class="form-input" value="1" min="1" max="99" inputmode="numeric" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Catatan / Promo</label>
+              <input type="text" id="inputItemNotes" class="form-input" placeholder="Promo beli 2 gratis 1">
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary-block" id="btnSubmitItem">
+            ✓ Masukkan ke Troli
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL PENGATURAN SESI & REALTIME CLOUD FIRESTORE
+         ==================================================================== -->
+    <div class="modal-overlay" id="syncModalOverlay">
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="modal-header">
+          <h3 class="modal-title">Sinkronisasi Multi-Device Realtime</h3>
+          <button class="modal-close-btn" id="closeSyncModalBtn">✕</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ID Sesi Belanja (HP & PC Wajib Sama)</label>
+          <input type="text" id="inputSessionId" class="form-input" value="sesi-lotte-mart-puri" style="font-weight: 700; color: #38bdf8;">
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+            Gunakan ID yang sama di HP dan laptop/PC Anda agar troli tersinkronisasi realtime detik itu juga.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Status Koneksi Saat Ini</label>
+          <div style="background:#0f172a; padding:10px 14px; border-radius:12px; font-size:12px; border:1px solid #334155;" id="syncDetailsBox">
+            Memuat detail koneksi...
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kredensial Firebase (Opsional / Kustom)</label>
+          <textarea id="inputCustomFirebaseJson" class="form-input" rows="4" style="font-family: monospace; font-size: 11px;" placeholder='{"apiKey": "AIzaSy...", "projectId": "proyek-kamu", ...}'></textarea>
+          <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
+            Aplikasi otomatis fallback ke LocalStorage + Multi-Tab Broadcast jika belum mengisi kredensial.
+          </p>
+        </div>
+
+        <button type="button" class="btn-primary-block" id="btnApplySessionSettings">
+          Terapkan Sesi & Simpan
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Lucide Script init -->
+  <script>
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+    // Update live status clock
+    function updateClock() {
+      const d = new Date();
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const clockEl = document.getElementById('liveClock');
+      if (clockEl) clockEl.innerText = `${h}:${m}`;
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+  </script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker registered:', reg.scope))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
+  </script>
+
+  <!-- Main Application Script (ES Module) -->
+  <script type="module" src="./app.js"></script>
+
+</body>
+</html>
